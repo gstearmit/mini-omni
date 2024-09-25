@@ -22,6 +22,7 @@ OUT_RATE = 24000
 OUT_CHANNELS = 1
 
 
+# Hàm xử lý audio đầu vào
 def process_audio(audio):
     filepath = audio
     print(f"filepath: {filepath}")
@@ -30,16 +31,20 @@ def process_audio(audio):
 
     cnt = 0
     if API_URL is not None:
+        # Nếu có API_URL, gửi yêu cầu đến server
         with open(filepath, "rb") as f:
             data = f.read()
+            # Mã hóa dữ liệu audio thành base64
             base64_encoded = str(base64.b64encode(data), encoding="utf-8")
             files = {"audio": base64_encoded}
             tik = time.time()
+            # Gửi POST request đến API
             with requests.post(API_URL, json=files, stream=True) as response:
                 try:
+                    # Xử lý từng chunk dữ liệu nhận được
                     for chunk in response.iter_content(chunk_size=OUT_CHUNK):
                         if chunk:
-                            # Convert chunk to numpy array
+                            # Chuyển đổi chunk thành numpy array
                             if cnt == 0:
                                 print(f"first chunk time cost: {time.time() - tik:.3f}")
                             cnt += 1
@@ -50,9 +55,10 @@ def process_audio(audio):
                 except Exception as e:
                     print(f"error: {e}")
     else:
+        # Nếu không có API_URL, sử dụng OmniInference trực tiếp
         tik = time.time()
         for chunk in omni_client.run_AT_batch_stream(filepath):
-            # Convert chunk to numpy array
+            # Chuyển đổi chunk thành numpy array
             if cnt == 0:
                 print(f"first chunk time cost: {time.time() - tik:.3f}")
             cnt += 1
@@ -61,8 +67,10 @@ def process_audio(audio):
             yield OUT_RATE, audio_data.astype(np.int16)
 
 
+# Hàm chính để khởi chạy giao diện Gradio
 def main(port=None):
 
+    # Tạo giao diện Gradio
     demo = gr.Interface(
         process_audio,
         inputs=gr.Audio(type="filepath", label="Microphone"),
@@ -71,8 +79,10 @@ def main(port=None):
         live=True,
     )
     if port is not None:
+        # Khởi chạy demo với port cụ thể
         demo.queue().launch(share=False, server_name="0.0.0.0", server_port=port)
     else:
+        # Khởi chạy demo với port mặc định
         demo.queue().launch()
 
 
